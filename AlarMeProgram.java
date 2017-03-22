@@ -1,126 +1,92 @@
-package alarMe2;
+package alarMe;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
 
-public class AlarMeProgram extends LoginProcess {
+public class AlarMeProgram {
 	
-	public static void main(String[] args) throws InterruptedException, ParseException, com.steadystate.css.parser.ParseException {
-	    AlarMeProgram program = new AlarMeProgram();
-	    program.init();
-	    String username = "brukernavn"; //Hentes fra database
-	    String password = "passord"; //Hentes fra database
-	    ArrayList<String> assignmentsList = setAssignments(username, password);
-	    Assignments assignments = new Assignments(assignmentsList);
-	    HashMap<String, Date> examsHash = setExams(username, password); 
-	    Exams exams = new Exams(examsHash);
-	    System.out.println(assignments.getAssignments());
-	    System.out.println(exams.getExams());
+	//private static WebDriver driver1 = new ChromeDriver();
+	Connection connection;
+	String username, user_password;
+	String db = "sql11163131";
+	
+	public AlarMeProgram(){
+		
 	}
-
-    public void init() {
-        System.setProperty("webdriver.chrome.driver",
-                "/Users/ingridstoen/Documents/workspace/alarMe/chromedriver.exe");
+	
+	public void init() {
+        System.setProperty("webdriver.chrome.driver","C:\\Users\\Heidi\\tdt4100-2017-master2\\"
+        		+ "ws\\chromedriver_win32\\chromedriver.exe");
     }
-    
-    public static ArrayList<String> setAssignments(String username, String password) throws InterruptedException {
-    	ArrayList<String> assignments = new ArrayList<String>();
-    	WebDriver driver = new ChromeDriver();
 
-        //BLACKBOARD
-        driver.get("https://ntnu.blackboard.com/webapps/portal/execute/tabs/tabAction?tab_tab_group_id=_70_1");
-        driver.findElement(By.className("loginPrimary")).click();
-        Thread.sleep(5000);
-
-        //Choose NTNU as the institution
-        chooseNTNU(driver);
-
-        //Fill in username and password to log in
-       login(username, password, driver);
-
-        //klikke inn på "varsler"
-        driver.findElement(By.linkText("Varsler")).click();
-        Thread.sleep(5000);
-        driver.findElement(By.id("headerTextheader::1-dueView::1-dueView_4")).click();
-        driver.findElement(By.id("headerTextheader::1-dueView::1-dueView_3")).click();
-        driver.findElement(By.id("headerTextheader::1-dueView::1-dueView_2")).click();
-
-        //hent alle øvinger fra "fremtiden"
-        List<WebElement> assignment_future = driver.findElements(By.className("itemGroups"));
-        for (WebElement a : assignment_future) {
-            assignments.add(a.getText());
-        }
-
-        //henter alle øvinger fra "imorgen"
-        List<WebElement> assignment_tomorrow = driver.findElements(By.className("itemGroups"));
-        for (WebElement a : assignment_tomorrow) {
-            assignments.add(a.getText());
-        }
-
-        //henter alle øvinger fra "idag"
-        List<WebElement> assignment_thisweek = driver.findElements(By.className("itemGroups"));
-        for (WebElement a : assignment_thisweek){
-            assignments.add(a.getText());
-        }
-        
-        return assignments;
-
-        //ITSLEARNING
+    	
+    public static void main(String[] args) throws InterruptedException, SQLException {
+	   	AlarMeProgram program = new AlarMeProgram();
+	   	program.setConnection();
+	   	program.init();
+	   	program.getNewUser().split("");
+	   	String username = program.getNewUser().substring(0);
+	   	String password = program.getNewUser().substring(1);
+        Assignments assignments = new Assignments();
+        assignments.setAssignments();
+		System.out.println(assignments.getAssignments());
+        Exams exams = new Exams();
+        exams.setExams();
+        System.out.println(exams.getExams());
 
     }
     
-    public static HashMap<String, Date> setExams(String username, String password) throws InterruptedException, ParseException {
-        WebDriver driver = new ChromeDriver();
-        HashMap<String, Date> exams = new HashMap<String, Date>();
-        
-    	//STUDWEB
-        driver.get("https://idp.feide.no/simplesaml/module.php/feide/login.php?asLen=169&AuthState=_"
-                + "d3cf8da4fdb8785ba65151ba2683aca1150fe3bfc2%3Ahttps%3A%2F%2Fidp.feide.no%2Fsimplesaml%"
-                + "2Fsaml2%2Fidp%2FSSOService.php%3Fspentityid%3Dhttps%253A%252F%252Ffsweb.no"
-                + "%252Fstudentweb%26cookieTime%3D1487768961");
-        Thread.sleep(5000);
-
-        //Choose NTNU as the institution
-        chooseNTNU(driver);
-
-        //innlogging med brukerinput
-        login(username, password, driver);
-
-        //need to choose NTNU as the institution one more time
-        chooseNTNUAgain(driver);
-
-        //adds the exam dates to this.exams as <subject code subject name, date>
-        List<WebElement> datesAndSubjects = driver.findElements(By.className("infoLinje"));
-        for (WebElement element : datesAndSubjects){
-            int index = datesAndSubjects.indexOf(element);
-        	if (index == 0 || index % 3 == 0) {
-        	    DateFormat df = new SimpleDateFormat("mm.dd.yyyy");
-                Date date = df.parse(element.getText());
-                String courseCode = datesAndSubjects.get(index + 1).getText();
-                String courseName = datesAndSubjects.get(index + 2).getText();
-            	exams.put(courseCode + " " + courseName, date);
-            }
+	
+	public void setConnection(){
+        try {
+        	connection = null;
+            //Class.forName("com.myql.jdbc.Driver");
+            String server = "sql11.freemysqlhosting.net";
+            String database_username = "sql11163131";
+            String database_password = "wi4gXfVvT3";
+            String connectionString = "jdbc:mysql://" + server + "/" + db + "?user=" + database_username + "&password=" + database_password;
+            connection = DriverManager.getConnection(connectionString);
             
+        } catch (Exception e){
+            e.printStackTrace();}
+  }
 
-//            String subject_code = items.get(1);
-//            String subject_name = items.get(2);
-//            String date_string = items.get(0);
-//            DateFormat df = new SimpleDateFormat("mm.dd.yyyy");
-//            Date date = df.parse(date_string);
-//            this.exams.put(subject_code + " "  + subject_name, date);
-        }
-         return exams;
-    }
-
+	
+	public String getNewUser() throws SQLException{
+		ArrayList<String> user = new ArrayList<String>();
+		setConnection();
+		Statement stm = null;
+		String query = "select * from Student";
+		try{
+			int row_database = 0;
+			int student_id = 15;
+			stm = connection.createStatement();
+			ResultSet rs = stm.executeQuery(query);
+			//siden vi tenker at det bare blir lagt til �n bruker om gangen
+			while(rs.next()){
+				row_database += 1;
+				student_id += 1;
+	            username = rs.getString("username");
+	            user_password = rs.getString("user_password");				
+			}
+            user.add(username);
+			user.add(user_password);
+			System.out.println("brukernavn = " + username + " passord = " + user_password + " student_id = " + student_id);
+			
+		}catch(Exception e){
+			System.out.println("Ingen nye brukere lagt til" + e);
+		
+		}finally {
+	        if (stm != null) { stm.close(); }
+	    }
+		return (user.get(0) + user.get(1));
+	}
+	
 
 }
+
